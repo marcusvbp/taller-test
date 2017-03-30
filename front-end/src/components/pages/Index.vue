@@ -52,7 +52,7 @@
         <data-table :data="filteredTickets" bordered :striped="true">
           <column label="Código do Ticket" field="cod">
             <template scope="row">
-              <router-link :to="'/details/'+row.cod">
+              <router-link :to="'/details/'+row._id+'/'+row.cod">
                 {{ row.cod }}
               </router-link>
             </template>
@@ -65,7 +65,7 @@
           <column label="Status" field="status">
             <template scope="row">
               <div v-if="createLinkResponder(row.status)">
-                <router-link :to="'/details/'+row.cod+'?responder=true'" :title="row.status">
+                <router-link :to="'/details/'+row._id+'/'+row.cod+'?responder=true'" :title="row.status">
                   Responder
                 </router-link>
               </div>
@@ -89,6 +89,7 @@ import TicketFilter from '../ticket-filter-component.vue'
 import dateFormat from 'dateformat'
 import { mapGetters } from 'vuex'
 import { mapActions } from 'vuex'
+import axios from 'axios'
 
 import {bus} from '../../config/event-bus'
 
@@ -158,18 +159,20 @@ export default {
       newT.cod = Math.random().toString().replace(/[^0-9]+/g, '').substr(0, 6);
       newT.createdAt = dateFormat(new Date(), 'dd/mm/yyyy');
 
-      console.log(newT);
+      axios.post('http://localhost:3000/tickets', newT).then((success) => {
+        this.doAddTickets(success.data).then(
+          () =>{
+            this.newTicket.cat = "";
+            this.newTicket.prod = "";
+            this.newTicket.description = "";
 
-      this.doAddTickets(newT).then(
-        () =>{
-          this.newTicket.cat = "";
-          this.newTicket.prod = "";
-          this.newTicket.description = "";
-
-          this.showAddTicketModal = false;
-        }
-      );
-
+            this.showAddTicketModal = false;
+          }
+        );
+      },
+      (err) => {
+        console.log("Erro ao postar novo ticker", err);
+      })
 
     },
     resetAlert: function() {
@@ -187,6 +190,18 @@ export default {
       'allProducts',
       'allTickets'
     ]),
+  },
+  created: function() {
+    if (this.allTickets.length == 0) {
+      axios.get('http://localhost:3000/tickets').then(
+        (res) => {
+          res.data.map((item) => {
+            this.doAddTickets(item.doc);
+          })
+        }, (err) => {
+          console.log("Erro ao obter os tickets do servidor", err);
+        })
+    }
   },
   mounted: function() {
     this.filteredTickets = this.allTickets;

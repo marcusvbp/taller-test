@@ -73,7 +73,9 @@
 <script>
 import UserMenu from '../user-menu-component.vue'
 import { mapGetters } from 'vuex'
+import { mapActions } from 'vuex'
 import dateFormat from 'dateformat'
+import axios from 'axios'
 
 export default {
   name: "detailpage",
@@ -82,7 +84,7 @@ export default {
       getTicket: 'Ticket'
     }),
     hasComment: function() {
-      if (this.ticket.comments.length > 0) {
+      if (this.ticket.comments && this.ticket.comments.length > 0) {
         return true;
       }
     },
@@ -93,6 +95,10 @@ export default {
     }
   },
   methods: {
+    ...mapActions([
+      'doUpdateTicket',
+      'doAddTickets'
+    ]),
     toggleAnswerModal: function() {
       this.showAnswerModal = !this.showAnswerModal;
     },
@@ -104,12 +110,27 @@ export default {
         text: this.newAnswerMsg
       };
       this.ticket.comments.push(comment);
+      axios.put('http://localhost:3000/tickets', this.ticket).then(
+        (success) => {
+          this.ticket = success.data;
+        },
+        (error) => {
+          console.log("Erro ao atualizar ticket", error);
+        }
+      );
       this.showAnswerModal = false;
       this.newAnswerMsg = "";
     },
     closeTicket: function() {
       this.ticket.status = "Fechado";
-      this.$router.push({path: '/' });
+      axios.put('http://localhost:3000/tickets', this.ticket).then(
+        (success) => {
+          this.$router.push({path: '/' });
+        },
+        (error) => {
+          console.log("Erro ao atualizar ticket", error);
+        }
+      );
     }
   },
   data() {
@@ -119,8 +140,22 @@ export default {
       newAnswerMsg: ''
     }
   },
-  created() {
+  created: function() {
     this.ticket = this.getTicket(this.$route.params.ticket);
+    if (!this.ticket) {
+      axios.get('http://localhost:3000/tickets').then(
+        (success) => {
+          success.data.map((item) => {
+            this.doAddTickets(item.doc).then(() => {
+              if (item.doc._id === this.$route.params.id) {
+                this.ticket = this.getTicket(this.$route.params.ticket);
+              }
+            });
+          })
+        }, (error) => {
+          console.log("Erro ao obter os tickets do servidor", error);
+        })
+    }
   },
   mounted() {
     if (this.$route.query.responder === "true") {

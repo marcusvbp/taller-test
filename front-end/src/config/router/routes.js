@@ -3,5 +3,5 @@ import detailpage from '../../components/pages/details.vue'
 
 export const routes = [
   { path: '/', component: Index, name: "Página Inicial" },
-  { path: '/details/:ticket', component: detailpage, name: "Detalhes", props: true }
+  { path: '/details/:id/:ticket', component: detailpage, name: "Detalhes", props: true }
 ]
